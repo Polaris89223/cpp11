@@ -27,7 +27,6 @@ void lamdaFunc(int x, int y) {
 		cout << " x:" << x << endl;
 	},placeholders::_1);
 	ee(13);
-
 	cout << " b:" << b << endl;
 }
 

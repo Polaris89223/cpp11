@@ -11,6 +11,7 @@
 #include "declaretype.hpp"
 #include "nullptr.hpp"
 #include "lamda.hpp"
+#include "delegateConstruct.hpp"
 
 using namespace std;
 struct Base {
@@ -52,6 +53,29 @@ auto add(T t, U u)->decltype(t+u){
 	return t + u;
 }
 
+struct T
+{
+	constexpr T():a(100) {}
+	int a;
+};
+
+struct person {
+	const char* name;
+	int age;
+};
+
+template<typename T>
+constexpr T display(T t) {
+	return t;
+}
+
+template<typename T>
+struct MyMap {
+	typedef map<int, T>mapType;
+};
+
+template<typename T>
+using MMap = map<int, T>;
 int main()
 {
 	/*特性1 原始字面量 语法 R"XXX(原始字符串)XXX",其中()两边的字符串可以省略，
@@ -355,6 +379,82 @@ int main()
 	*/
 	auto lamdaFunc1 = [&](int x,int y)->int{return x+y; };
 	lamdaFunc(1,2);
+
+	/*
+	特性14 constexpr(常量表达式)：指的就是由多个(>=1)常量(值不会改变)组成并且在编译
+	过程中就得到计算结果的表达式。
+	常量表达式发生在编译期间
+	凡是修饰"只读"语义的场景使用const，表达"常量"语义的场景使用constexpr
+	1.常量表达式函数
+	    1）修饰函数，函数必须由返回值，并且return返回的表达式是常量表达式。
+		2）函数在使用之前，必须由对应的定义语句。
+		3）整个函数的函数体中，不能出现非常量表达式之外的语句（using指令 typedef语句
+		以及static_assert断言、return语句除外）
+	2.修饰模板函数
+	   如果constexpr修饰的模版函数实例化结果不满足常量表达式函数的要求，则constexpr会
+	   被自动忽略，即该函数等同于一个普通函数。
+	3.修饰构造函数
+	   构造函数的函数体必须为空，并且必须采用初始化列表的方式为各个成员赋值。
+	*/
+	const int expi = 520;
+	constexpr int expj = expi + 1;
+	constexpr T expBase;
+	constexpr struct person person1 {"lucy",19};
+	constexpr struct person personret = display<struct person>(person1);
+
+	/*
+	特性15:using的使用
+	  语法：using 新的类型  = 旧的类型;
+	  1.定义类型别名
+	  2.为模板定义别名
+	  using语法和typedfe一样，并不会创建出新的类型，他们只是给某些类型定义了新的名字
+	  using相较于typedef的优势在于定义函数指针别名看起来更加直观，并且可以给模版定义
+	  别名
+	*/
+	typedef int Integer;
+	Integer integerA = 0;
+	typedef int(*funcPtr)(int, string);
+	using func1 = int(*)(int, string);
+
+	MyMap<int>::mapType maptype1;
+	maptype1.insert(make_pair(1, 1));
+	maptype1.insert(make_pair(2, 2));
+	maptype1.insert(make_pair(3, 3));
+	Container<MyMap<int>::mapType> printContainer1;
+	printContainer1.print(maptype1);
+
+	MyMap<double>::mapType maptype2;
+	maptype2.insert(make_pair(1, 1.11));
+	maptype2.insert(make_pair(2, 2.22));
+	maptype2.insert(make_pair(3, 3.33));
+	Container<MyMap<double>::mapType> printContainer2;
+	printContainer2.print(maptype2);
+
+	MMap<string> maptype3;
+	maptype3.insert(make_pair(1, "1.11"));
+	maptype3.insert(make_pair(2, "2.22"));
+	maptype3.insert(make_pair(3, "3.33"));
+	Container<MMap<string>> printContainer3;
+	printContainer3.print(maptype3);
+
+	/*
+	特性16:委托构造函数和继承构造函数
+	   委托构造函数:允许使用同一个类中的一个构造函数调用其他的构造函数，从而简化
+	   变量的相关初始化。
+	   注意事项：
+	       1)链式的构造函数调用不要形成一个闭环，否则会在运行期间抛异常。
+		   2)如果要进行多层构造函数的链式调用，建议将构造函数的调用写在初始列表中而
+		   不是函数体内，否则编译器会提示形参的重定义。
+		   3)在初始化列表中调用了代理构造函数初始化某个类成员变量之后，就不能在初始化
+		   列表中再次初始化这个变量了。
+	   继承构造函数:c++11中提供的继承构造函数可以让派生类直接使用基类的构造函数，而无需
+	   自己在写构造函数，尤其是在基类很多构造函数的情况下，可以极大简化派生类构造函数的
+	   编写。
+	*/
+	ChildBase childBase(520, 13.14, "I love you");
+	childBase.func();
+	childBase.func(19);
+	childBase.func(19, "lily");
 
 	getchar();
 }

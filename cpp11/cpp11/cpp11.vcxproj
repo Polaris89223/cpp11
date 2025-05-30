@@ -158,6 +158,7 @@
   <ItemGroup>
     <ClInclude Include="auto.hpp" />
     <ClInclude Include="declaretype.hpp" />
+    <ClInclude Include="delegateConstruct.hpp" />
     <ClInclude Include="except.hpp" />
     <ClInclude Include="lamda.hpp" />
     <ClInclude Include="nullptr.hpp" />
