@@ -157,7 +157,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="auto.hpp" />
+    <ClInclude Include="declaretype.hpp" />
     <ClInclude Include="except.hpp" />
+    <ClInclude Include="lamda.hpp" />
+    <ClInclude Include="nullptr.hpp" />
     <ClInclude Include="template.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

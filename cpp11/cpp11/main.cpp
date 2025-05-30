@@ -4,9 +4,14 @@
 #include <iostream>
 #include <string>
 #include <cassert>
+#include <vector>
 #include "template.hpp"
 #include "except.hpp"
 #include "auto.hpp"
+#include "declaretype.hpp"
+#include "nullptr.hpp"
+#include "lamda.hpp"
+
 using namespace std;
 struct Base {
 	Base() :a(250) {}
@@ -30,10 +35,27 @@ char* createArray(int size) {
 	char* array = new char[size];
 	return array;
 }
+//函数声明
+int func_int() { return 10; };
+int& func_int_r() { int a = 10; return a;};
+int&& func_int_rr() { return 10; };
+const int func_cint() { return 10; };
+const int& func_cint_r() { return 10; };
+const int&& func_cint_rr() { return 10; };
+const Base func_cBase(){ 
+	Base a;
+	return a; };
+
+//T->参数1类型  U->参数2类型
+template <typename T,typename U>
+auto add(T t, U u)->decltype(t+u){
+	return t + u;
+}
+
 int main()
 {
-	//特性1 原始字面量 语法 R"XXX(原始字符串)XXX",其中()两边的字符串可以省略，原始字面量R可以
-	//直接表示字符串的实际含义，而不需要额外对字符串做转义
+	/*特性1 原始字面量 语法 R"XXX(原始字符串)XXX",其中()两边的字符串可以省略，
+	原始字面量R可以直接表示字符串的实际含义，而不需要额外对字符串做转义*/
 	string str = R"(D:\hello\World\test.text)";
 	string str1 = R"(<html>
                      <title>
@@ -160,19 +182,30 @@ int main()
 	cout << str_bin << ": " << i_bin << endl;
 	cout << str_auto<< ": " << i_auto << endl;
 
-	//特性9 自动类型推导auto和decltype
-	//auto 变量名=变量值;
-	//当变量不是指针或者引用类型时，推导的结果中不会保留const、volatile关键字
-	//当变量是指针或者引用类型时，推导的结果中会保留const、volatile关键字
-	//auto的限制 
-	//  1)不能用于函数形参 
-	//  2)不能用于类的非静态成员变量的初始化
-	//  3)不能使用auto关键字定义数组 
-	//  4)不能使用auto推导出模板参数
-	//auto的应用
-	/*
+	/*特性9 自动类型推导auto和decltype
+	auto 变量名=变量值;
+	当变量不是指针或者引用类型时，推导的结果中不会保留const、volatile关键字
+	当变量是指针或者引用类型时，推导的结果中会保留const、volatile关键字
+	auto的限制 
+	  1)不能用于函数形参 
+	  2)不能用于类的非静态成员变量的初始化
+	  3)不能使用auto关键字定义数组 
+	  4)不能使用auto推导出模板参数
+	auto的应用
 	    1)用于STL容器的遍历
 		2)用于泛型编程
+	decltype 类型推导，不需要初始化,推导出来的类型可以用于重新定义变量
+	语法 decltype(表达式)
+	推导规则
+	   1)表达式为普通变量或者普通表达式或类表达式，这种情况下，使用decltype推导出
+	   的类型和表达式的类型是一致的。
+	   2)表达式是函数调用，使用decltype推导出的类型和函数返回值一致。如果函数返回
+	   的是一个纯右值，对于纯右值而言只有类型类型可以携带const、volatile限定符
+	   除此之外需要忽略掉这两个限定符。
+	   3）如果表达式是一个左值，或者被括号()包围，使用decltype推导出的是表达式类型
+	   的引用（如果右const、volatile限定符不能忽略）
+	应用
+	   泛型编程
 	*/
 
 	//没有const修饰
@@ -200,5 +233,128 @@ int main()
 
 	autoFunc1<T1, int>();
 	autoFunc1<T2, string>();
+
+	int x = 0;
+	//a:int
+	decltype(x) a = x;
+	//b:int
+	decltype(func_int()) b = x;
+	//cc:int&
+	decltype(func_int_r()) cc = x;
+	//dddd:int&&
+	decltype(func_int_rr()) dddd = 0;
+	//e:int
+	decltype(func_cint()) e = 0;
+	//f:int&
+	decltype(func_cint_r()) f = 0;
+	//g:int&&
+	decltype(func_cint_rr()) g = 0;
+	//h:const Base
+	decltype(func_cBase()) h = 0;
+
+	const Base baseObj;
+	//带有括号的表达式
+	//aaa:int
+	decltype(baseObj.b) aaa = 0;
+	//bbb:const int&
+	decltype((baseObj.b)) bbb = 0;
+	int mm = 0;
+	int nn = 0;
+	//ccc:int
+	decltype(mm+nn) ccc = 0;
+	//xxx:int&
+	decltype(nn=mm+nn) xxx = nn;
+
+	list<int> ls{ 1,2,3,4,5,6,7 };
+	MyContainer<list<int>> mycontainer;
+	mycontainer.print(ls);
+
+	const list<int> ls1{ 1,2,3,4,5,6,7 };
+	MyContainer<const list<int>> mycontainer1;
+	mycontainer1.print(ls1);
+
+	/*
+	特性10 返回值类型后置语法，说直白点就是将decltype和auto结合起来完成返回类型的推导
+	auto func(参数1，参数2,...)->decltype(表达式)
+	auto会追踪deltype()推导出的类型
+	*/
+	int afterX = 520;
+	double afterY = 13.14;
+	auto aftetVal = add<int, double>(afterX, afterY);
+	cout << "aftetVal: " << aftetVal << endl;
+
+	/*
+	特性11 基于范围的for循环
+	for(declaration:expression){
+	  //循环体
+	}
+	declaration表示遍历声明，在遍历过程中，当前被遍历到的元素会被存储到声明的变量中
+    expression是要遍历的对象，它可以是表达式、容器、数组，初始化列表等。
+	注意事项：
+	     1)使用普通的for循环方式（基于迭代器）遍历关系型容器，auto自动推导出的是一个
+		 迭代器类型，需要使用迭代器的方式去除元素中的键值对（和指针的操作方式相同）
+		  it->first it->second
+		 2)使用基于范围的for循环遍历关系型容器，auto自动推导出的类型是容器中的value_type
+		 相当于一个队组（std::pair)对象，提取值的方式如下:
+		 it.first it.second
+		 3)元素只读，对应set容器来说，内部元素是只读的，这是由容器特性决定的，因此在
+		 基于范围的for循环中auto&会被视为const auto&
+		 4)map容器中key也是只读的
+		 5)访问次数:基于范围的for循环,访问容器只访问1次。
+	*/
+	vector<int> vt{ 1,2,3,4,5,6,7,8,9 };
+	for (auto it = vt.begin(); it != vt.end(); ++it) {
+		cout << *it << " ";
+	}
+	cout << endl;
+	//基于范围的for循环
+	for (auto& it : vt) {
+		cout << it << " ";
+	}
+	cout << endl;
+
+	/*
+	特性12 指针空值类型-nullptr
+	nullptr无法转换为整形，但是可以隐士匹配指针类型，在C++11标准下，相比NULL和0，
+	使用nullptr初始化指针可以令我们编写的程序更加健壮。
+	*/
+	int* ptr1 = nullptr;
+	char* ptr2 = nullptr;
+	double* ptr3 = nullptr;
+	void* ptr4 = nullptr;
+
+	//int
+	nullptrFunc(10);
+	//char*
+	nullptrFunc(nullptr);
+
+	/*
+	特性13 lamda表达式
+	语法：[capture](params)opt->ret{body;};
+	其中capture是捕获列表，params是参数列表 opt是函数选项，ret是返回值类型，body是
+	opt选项,不需要可以省略
+	   mutable :可以修改按值传递进来的拷贝
+	   exception:指定函数抛出的异常，如抛出整数类型的异常，可以使用throw ()；
+	函数体
+	[]不捕捉任何变量
+	[&]捕获外部作用域中所有变量，并列为引用在函数体内使用(按引用捕获)
+	[=]捕获外部作用域中所有变量，并作为副本在函数体内使用(按值捕获)
+	   拷贝的副本在匿名函数体内部都是只读的
+	[=,&foo]按值捕获外部作用域中所有变量，并按照引用捕获外部变量foo
+	[bar]按值捕获bar变量，同时不捕获其他变量
+	[&bar]按引用捕获bar变量，同时不捕获其他变量
+	[this]捕获当前类中的this指针
+	   函数本质：
+	     1)lamda表达式的类型在c++11中会被看成一个带operator()的类，即仿函数。
+		 2)按照C++标准，lamda表达式的operator()默认是const的，一个const成员函数
+		 是无法修改成员变量值的。
+     mutable 选项的作用在于取消operator()的const属性。
+	     3）lamda表达式在C++中被看作是一个仿函数，因此可以使用std::fuction和std::bind
+		 来存储和操作lamda表达式。
+		 4）对于没有捕获任何外部变量的lamda表达式，可以转成一个普通的函数指针。
+	*/
+	auto lamdaFunc1 = [&](int x,int y)->int{return x+y; };
+	lamdaFunc(1,2);
+
 	getchar();
 }
