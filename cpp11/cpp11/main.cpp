@@ -12,6 +12,20 @@
 #include "nullptr.hpp"
 #include "lamda.hpp"
 #include "delegateConstruct.hpp"
+#include "initialList.hpp"
+#include "functional.hpp"
+#include "rvReference.hpp"
+#include "forward.hpp"
+#include "c11Ptr.hpp"
+#include "sharedPtr.hpp"
+#include "friend.hpp"
+#include "enumtest.hpp"
+#include "UnionTest.hpp"
+#include "chrono.hpp"
+#include "thread.hpp"
+#include "mutex.hpp"
+#include "condition.hpp"
+#include "atomic.hpp"
 
 using namespace std;
 struct Base {
@@ -76,6 +90,8 @@ struct MyMap {
 
 template<typename T>
 using MMap = map<int, T>;
+
+
 int main()
 {
 	/*特性1 原始字面量 语法 R"XXX(原始字符串)XXX",其中()两边的字符串可以省略，
@@ -227,7 +243,7 @@ int main()
 	   的是一个纯右值，对于纯右值而言只有类型类型可以携带const、volatile限定符
 	   除此之外需要忽略掉这两个限定符。
 	   3）如果表达式是一个左值，或者被括号()包围，使用decltype推导出的是表达式类型
-	   的引用（如果右const、volatile限定符不能忽略）
+	   的引用（如果有const、volatile限定符不能忽略）
 	应用
 	   泛型编程
 	*/
@@ -407,7 +423,7 @@ int main()
 	  语法：using 新的类型  = 旧的类型;
 	  1.定义类型别名
 	  2.为模板定义别名
-	  using语法和typedfe一样，并不会创建出新的类型，他们只是给某些类型定义了新的名字
+	  using语法和typedef一样，并不会创建出新的类型，他们只是给某些类型定义了新的名字
 	  using相较于typedef的优势在于定义函数指针别名看起来更加直观，并且可以给模版定义
 	  别名
 	*/
@@ -455,6 +471,634 @@ int main()
 	childBase.func();
 	childBase.func(19);
 	childBase.func(19, "lily");
+
+	/*
+	特性17:列表初始化 类名或者类型名{实参}
+	1.统一的初始化
+	2.列表初始化细节
+	 2.1 聚合体(普通数组本身就是一个聚合体)
+	    满足以下条件的类(class、struct、union)可以看作是一个聚合类型
+		无用户自定义的构造函数
+		无私有或保护的非静态数据成员
+		无基类
+		无虚函数
+		类中不能使用{}和=直接初始化的非静态数据成员(C++14开始就支持了)
+	2.2 非聚合体(自定义数组类型就是一个非聚合体)
+		满足以下条件的类(class、struct、union)可以看作是一个非聚合类型
+	    有自定义的构造函数
+		有私有或保护的非静态数据成员
+		有基类
+		有虚函数
+	2.3 std::initializer_list模板类 可以接收多个相同类型的参数
+	    1）作为构造函数的参数
+		2）作为普通函数的参数
+	注意事项：
+		结构体中的静态变量z不能使用初始化列表进行初始化，他的初始化遵循静态成员的
+		初始化
+	*/
+	Person p1(520);
+	Person p2 = 500;
+	//初始化列表方式
+	Person p3 = { 520 };
+	Person p4{ 520 };
+	int p5 = { 1314 };
+	int p6{ 1314 };
+	int arr1[] = { 1,2,3,4 };
+	int arr2[]{1,2,3,4 };
+	int *p7 = new int{ 520 };
+	int* aar3 = new int[3]{ 1,2,3 };
+
+	//initializer_list用法
+	funcPerson({ 1,2,3,4,5 });
+
+	/*
+	特性18:可调用对象的包装器、绑定器
+	1.可调用对象
+	  1)是一个函数指针
+	  2)是一个具有operator()成员函数的类对象（仿函数）
+	  3)是一个可被转换为函数指针的类对象
+	  4)是一个类成员的函数指针或者类成员指针
+	2.可调用对象包装器(std::function)
+	  #include <functional>
+	  std::function<返回值类型(参数类型列表)> diy_name = 可调用对象;
+	  注意事项
+	    1)类的成员函数，不能直接包装
+	3.可调用对象绑定器(std::bind)
+	  std::bind用来将可调用对象和其参数一起进行绑定，绑定后的结果可以使用std::function
+	  进行保存，并延迟调用到任何我们需要的时候。
+	   1）将可调用对象与其参数一起绑定成一个仿函数。
+	   2）将多元(参数个数为n，n>1)可调用对象转换为一元或者(n-1)元可调用对象,即只绑定
+	   部分参数。
+	   //绑定非类成员函数/变量
+	   auto f = std::bind(可调用对象地址，绑定的参数/占位符);
+	   //绑定类成员函数/变量
+	   auto f = std::bind(类函数/成员地址,类实例对象地址，绑定的参数/占位符);
+	   std::placeholders::_1是一个占位符,代表这个位置将在函数调用时被传入的第一个参数
+	   所替代。
+	   绑定器绑定完得到了一个仿函数。
+	*/
+	Person persons18(11);
+	persons18(19, "12112");
+
+	//类的函数指针
+	personFuncptr funcptr1 = Person::hello;
+	using personFuncPtr1 = void(Person::*)(int,string);
+	personFuncPtr1 funcptr2 = &Person::world;
+
+	//类的成员指针
+	using personFuncPtr4 = int Person::*;
+	personFuncPtr4 funcptr4 = &Person::m_id;
+
+	(persons18.*funcptr2)(20,"ace");
+	persons18.*funcptr4 = 100;
+	cout << "m_id: " << persons18.m_id << endl;
+
+	//1.包装普通函数
+	std::function<void(int, string)> personFunc1 = printPerson;
+	personFunc1(1, "ace");
+	//2.包装类的静态函数
+	std::function<void(int, string)> personFunc2 = Person::hello;
+	personFunc2(2, "sabo");
+	//3.包装仿函数
+	std::function<void(string)> personFunc3 = persons18;
+	personFunc3("luffy");
+	//4.包装转为函数指针的对象
+	std::function<void(int,string)> personFunc4 = Person::hello;
+	personFunc4(3,"sabbp");
+
+	A funcitonA(printPerson);
+	funcitonA.notify(1,"ace");
+
+	A funcitonB(Person::hello);
+	funcitonB.notify(2, "ace");
+
+	A funcitonC(persons18);
+	funcitonC.notify(3, "ace");
+
+	bind(printPerson, placeholders::_1, placeholders::_2)(1, "ximi");
+	bind(printPerson, 2, placeholders::_2)(3, "ximi");
+	for (size_t i = 0; i < 10; i++)
+	{
+		auto f = bind(output_add, i + 100, i + 200);
+		testBind(i, i, f);
+		auto f1 = bind(output_add, placeholders::_1, placeholders::_2);
+		testBind(i, i, f1);
+	}
+	//成员函数绑定
+	auto bindfunc = bind(&Person::world, &persons18, 520, placeholders::_1);
+	bindfunc("1314");
+	//绑定成员变量
+	auto bindfunc1 = bind(&Person::m_id, &persons18);
+	function<int&(void)> bindfunc2 = bind(&Person::m_id, &persons18);
+	cout << bindfunc1() << endl;
+	bindfunc1() = 666;
+	cout<<bindfunc1()<<endl;
+
+    /*
+	特性19 右值引用
+	c++11中添加了新的类型，称为右值引用，标记为&&
+	左值(locate value):指存储在内存中、有明确存储地址(可取地址)的数据。
+	右值(read value):是指可以提供数据值的数据(不可取地址)
+	右值引用:只允许右值初始化右值引用。
+	右值引用作用:能够延长某块内存的存活时间。
+	纯右值：非引用返回的临时变量、运算表达式产生的临时变量、原始字面量和lambda表达式等
+	将亡值：与右值引用相关的表达式，比如T&&类型函数的返回值，std::move的返回值等
+	注意事项(类型推导，&&未定义的引用类型，const T&&表示一个右值引用)
+	    1)通过右值推导T&&或者auto &&得到的是一个右值引用类型。
+		2)通过非右值（右值引用、左值、左值引用、常量右值引用、常量左值引用）推导
+		T&&或者auto && 得到的是一个左值引用类型。
+		3）左值和右值是独立于他们类型的，右值引用类型可能是左值也可能是右值。
+		4）编译器会将已命名的右值引用视为左值，将未命名的右值引用视为左值。
+		5）auto&&或者函数参数类型自动推导的T&&是一个未定的引用类型，它可能是左值
+		引用类型也可能是右值引用类型，这取决于初始化的值类型
+		6）通过右值推导T&& 或者auto &&得到的是一个右值引用类型，其余都是左值引用
+		类型。
+	*/
+	//左值
+	int lvalue = 9;
+
+	//左值引用
+	int &lvalRenrence = lvalue;
+
+	//右值 右值引用
+	int && rvalRerence = 8;
+
+	//常量左值引用
+	const auto & lvalRenrence1 = lvalue;
+
+	//常量右值引用
+	const auto && rvalRerence1 = 6;
+
+    //要求右侧的对象是一个临时对象，才会调用移动构造函数
+	//如果没有移动构造函数，就会调用拷贝构造函数
+	RvReference reference = getObj();
+	cout << endl;
+	RvReference&& reference1 = getObj();
+	printf("m_num address:%p \n", reference1.m_num);
+
+	//如果没有移动构造函数，使用右值引用初始化要求更高一些
+	//要求是一个临时的，不能取地址的对象
+	cout << endl;
+	RvReference&& reference2 = getObj1();
+	printf("m_num address:%p \n", reference2.m_num);
+
+	/*
+	特性:20 std::move
+	作用：使用std::move方法可以将左值转换为右值，使用这个函数并不能移动任何东西，而是
+	和移动构造函数一样都具有移动语义，将对象的状态或者所有权从一个对象转移到另一个对象
+	只是转移，没有内存拷贝。
+	从实现上讲，std::move基本等同于一个类型转换：static_cast<T&&>(lvalue),函数原型如下:
+	template<class _Ty>
+	_NODISCARD constexpr remove_reference_t<_Ty>&&move(_Ty&& _Arg) noexcept
+	{	// forward _Arg as movable
+	return (static_cast<remove_reference_t<_Ty>&&>(_Arg));
+	}
+	*/
+	RvReference&& reference3 = move(reference2);
+	RvReference&& reference4 = move(reference);
+
+	/*
+	特性:21 std::forward
+	作用:右值引用类型独立于值的，一个右值引用作为函数参数的形参时，在函数内部转发
+	该参数给内部其他函数的时候，它就变成一个左值，并不是原类型了，如果需要按照参数
+	原来的类型转发到另一个函数，可以用C++11提供的std::forward()函数，该函数实现的功
+	能称为完美转发。
+	template<class _Ty>
+	_NODISCARD constexpr _Ty&& forward(remove_reference_t<_Ty>& _Arg) noexcept
+	{	// forward an lvalue as either an lvalue or an rvalue
+	return (static_cast<_Ty&&>(_Arg));
+	}
+	精简之后的例子：std::forward(T)(t);
+	推导规则：
+	      当T为左值引用类型时，t将被转移为T类型的左值。
+		  当T不是左值引用类型时，t将被转移为T类型的右值。
+	*/
+	testForward(520);
+	int testNum = 1314;
+	testForward(testNum);
+	testForward(forward<int>(testNum));
+	testForward(forward<int&>(testNum));
+	testForward(forward<int&&>(testNum));
+
+	/*
+	特性22:智能指针
+	智能指针是存储指向动态分配(堆)对象指针的类，用于生存期的控制，能够确保在离开指针
+	所在的作用域时，自动地销毁动态分配的对象，防止内存泄露，智能指针的核心实现技术是
+	引用计数，每使用它一次，内部引用计数加1，每析构一次内部的引用计数减1，减为0时，删
+	除指向的堆内存。
+	C++11中引入三种类型智能指针，使用这些智能指针需要引用头文件<memory>
+	std::shared_ptr:共享的智能指针 语法:std::shared_ptr<T>智能指针名称(创建堆内存)
+	初始化方式：
+	      1)通过构造函数初始化
+		  2)通过拷贝构造函数和移动构造函数初始化
+		  3)通过std::make_shared初始化
+		  4)通过reset方法初始化
+	指定删除器
+	     1)当shared_ptr管理数组内存的时候，必须指定删除器，否则内存无法释放
+		 2)也可以使用默认删除器函数std::default_delete
+	std::unique_ptr:独占的智能指针 语法:std::unique_ptr<T>智能指针名称(创建堆内存)
+	    初始化方式
+		  1)通过构造函数初始化
+		  2)通过move函数初始化
+		  3)通过reset方法初始化
+    指定删除器 
+	std::weak_ptr:弱引用智能指针，它不共享指针，不能操作资源，是用来监视shared_ptr的。
+	初始化:
+	   //默认构造函数
+	   constexpr weak_ptr() noexcept;
+	   //拷贝构造函数
+	   weak_ptr(const weak_ptr& x) noexcept;
+	   template<class U>weak_ptr(const weak_ptr<U>& x) noexcept
+	   //通过shared_ptr对象构造
+	   template<class U>weak_ptr(const shared_ptr<U>& x) noexcept
+	作用：
+	      1)返回管理this的shared_ptr（被析构两次）
+		  2)解决循环引用的问题
+    其他函数
+	      1)use_count()当前内存块被多少哥智能指针引用
+		  2)expired()  判断观测的资源是否已经被释放
+		  3)lock()用来获取管理所监测资源的shared_ptr对象
+		  4)reset() 重置弱引用对象，使其不监测任何资源
+	*/
+	//通过构造函数初始化
+	shared_ptr<int> sharedPtr1(new int(3));
+	cout << "sharedPtr1 use count: " << sharedPtr1.use_count() << endl;
+	//通过拷贝构造函数和移动构造函数初始化
+	shared_ptr<int> sharedPtr2 = move(sharedPtr1);
+	cout << "sharedPtr1 use count: " << sharedPtr1.use_count() << endl;
+	cout << "sharedPtr2 use count: " << sharedPtr2.use_count() << endl;
+	shared_ptr<int> sharedPtr3 = sharedPtr2;
+	cout << "sharedPtr2 use count: " << sharedPtr2.use_count() << endl;
+	cout << "sharedPtr3 use count: " << sharedPtr3.use_count() << endl;
+	//通过std::make_shared初始化
+	shared_ptr<int> sharedPtr4 = std::make_shared<int>(8);
+	shared_ptr<C11Ptr> sharedPtr5 = std::make_shared<C11Ptr>(8);
+	shared_ptr<C11Ptr> sharedPtr6 = std::make_shared<C11Ptr>("hello,world");
+	//通过reset方法初始化
+	sharedPtr6.reset();
+	cout << "sharedPtr6 use count: " << sharedPtr6.use_count() << endl;
+	sharedPtr5.reset(new C11Ptr("111"));
+	cout << "sharedPtr5 use count: " << sharedPtr5.use_count() << endl;
+
+    //获取原始指针
+	C11Ptr* c11ptr = sharedPtr5.get();
+	c11ptr->setValue(1000);
+	c11ptr->print();
+
+	//通过智能指针对象直接操作
+	sharedPtr5->setValue(2000);
+	sharedPtr5->print();
+
+	shared_ptr<C11Ptr> sharedPtr7(new C11Ptr(100),[](C11Ptr*t){
+		//释放内存操作
+		cout << "----------------------" << endl;
+		delete t;
+	});
+	sharedPtr7.reset();
+
+	shared_ptr<C11Ptr> sharedPtr8(new C11Ptr[5], [](C11Ptr*t) {
+		//释放内存操作
+		cout << "----------------------" << endl;
+		delete [] t;
+	});
+	sharedPtr8.reset();
+
+	//使用C++11提供的默认删除器模板函数std::default_delete<T>
+	shared_ptr<C11Ptr> sharedPtr9(new C11Ptr[5], std::default_delete<C11Ptr[]>());
+	sharedPtr9.reset();
+
+	//通过构造函数初始化
+	unique_ptr<int> uniquePtr(new int(9));
+	//通过移动构造函数初始化
+	unique_ptr<int> uniquePtr1 = move(uniquePtr);
+	//通过reset初始化
+	uniquePtr1.reset();
+	uniquePtr1.reset(new int(10));
+	//获取原始指针
+	unique_ptr<C11Ptr> uniquePtr2(new C11Ptr());
+	C11Ptr* uniquePtr3 = uniquePtr2.get();
+	uniquePtr3->setValue(2);
+	uniquePtr3->print();
+	//指定删除器
+	using ptrFunc = void(*)(C11Ptr*);
+	unique_ptr<C11Ptr,ptrFunc>uniquePtr4(new C11Ptr("hello"), [](C11Ptr*t) { delete t; });
+	unique_ptr<C11Ptr, function<void(C11Ptr*)>>uniquePtr5(new C11Ptr("hello"), [=](C11Ptr*t) { delete t; });
+	
+	//独占的智能指针可以管理数据类型的地址,能够自动释放，不需要指定删除器
+	unique_ptr<C11Ptr[]>uniquePtr6(new C11Ptr[3]);
+	//在c++11中shared_ptr不支持下面的写法，c++11以后才支持的
+	shared_ptr<C11Ptr[]>uniquePtr7(new C11Ptr[3]);
+	
+	//弱引用智能指针
+	shared_ptr<int> sp(new int);
+	weak_ptr<int> wp1;
+	weak_ptr<int> wp2(wp1);
+	weak_ptr<int> wp3(sp);
+	weak_ptr<int> wp4;
+	wp4 = sp;
+	weak_ptr<int> wp5;
+	wp5 = wp3;
+
+	//共享智能指针注意事项
+	//1)不能使用一个原始地址初始化多个共享智能指针
+	SharedPtr* sharedPtrTest = new SharedPtr;
+	shared_ptr<SharedPtr> sharedPtrTest1(sharedPtrTest);
+	shared_ptr<SharedPtr> sharedPtrTest2 = sharedPtrTest1;
+
+	//2)函数不能返回管理了this的共享智能指针对象
+	//通过继承类模板std::enable_shared_from_this<T>解决
+	shared_ptr<SharedPtr> sharedPtrTest3(new SharedPtr);
+	cout << "use count:" << sharedPtrTest3.use_count() << endl;
+	shared_ptr<SharedPtr> sharedPtrTest4 = sharedPtrTest3->getSharedPtr();
+	cout << "use count:" << sharedPtrTest4.use_count() << endl;
+	
+	//3)循环引用
+	testSharedPtr();
+
+    /*
+	特性:23 POD(普通旧数据)类型，POD在C++中是非常重要的一个概念，通常用于说明一个类型的
+	属性，尤其是用户自定义的类型的属性。
+	在C++11中将POD划分为两个基本概念的合集，即平凡的(trivial)和标准布局的(standard layout)
+	"平凡"类型满足以下要求：
+	  1）拥有平凡的默认构造函数(trivial construct)和析构函数(trival destruct);
+	  2) 拥有平凡的拷贝构造函数和移动构造函数。
+	  3) 拥有平凡的拷贝赋值运算符和移动赋值运算符。
+	  4) 不包含虚函数及虚基类。
+	"标准布局"类型满足以下要求：
+	  1)所有非静态成员有相同的访问权限(public,private,protected)
+	  2)在类或者结构体继承时,满足以下两种情况之一
+	    派生类中有非静态成员，基类中包含静态成员(或者基类没有变量)
+		派生类中没有非静态成员,基类有非静态成员
+	  3)子类中第一个非静态成员的类型与基类不同。
+	  4)没有虚函数和虚基类
+	  5)所有非静态数据成员均符合标准布局类型，其基类也符合标准布局，这是一个递归定义。
+	  对"平凡"类型判断
+	  c++11提供的类模板is_trivial 其语法如下：
+	   template <class T>struct std::is_trivial;
+	  对"标准布局"类型判断
+	  c++11提供的类模板is_standard_layout 其语法如下：
+	  template <class T>struct std::is_standard_layout;
+	 好处：
+	     1)字节赋值，代码中我们可以安全地使用memset和memcpy对pod类型进行初始化和拷贝操作
+		 2）提供C内存布局兼容，C++程序可以与C函数进行互相操作，因为POD类型的数据在C与C++
+		 之间的操作是安全的。
+		 3）保证静态初始化的安全有效，静态初始化在很多时候能够提供程序的性能，而POD类型的对象
+		 初始化往往更加简单。
+	*/
+	cout << "SharedPtr is  trivial type? " << std::is_trivial<SharedPtr>::value << endl;
+	cout << "SharedPtr is_standard_layout type? " << std::is_standard_layout<SharedPtr>::value << endl;
+	
+   /*
+   特性:24 默认函数控制(=default 与 =delete)
+   1.类与默认函数
+   在c++中声明自定义的类，编译器会默认帮助程序员生成一些他们未定义的成员函数，这样的函数版本
+   被称为"默认函数",默认函数有以下六类：
+    1)无参数构造函数:创建类对象
+	2)拷贝构造函数:拷贝类对象
+	3)移动构造函数:拷贝类对象
+	4)拷贝赋值函数:类对象赋值
+	5)移动赋值函数:类对象赋值
+	6)析构函数:销毁类对象
+	在c++11中以上六大函数才可以使用=default修饰。
+	注意事项：
+	   如果程序对C++类提供的默认函数（上面提到的六大函数）进行了实现，那么可以通过=default将
+	   他们再次指定为默认函数，不能使用=default修饰六大函数以外的函数。
+   =delete:禁止使用默认生成的函数
+       =delete可以修饰六大函数以外的函数 
+   */
+
+  /*
+  特性:25 扩展的friend语法
+  1.语法改进
+  在c++11标准中对friend关键字进行了一些改进，以保证更加好用：
+   声明一个类为另一个类的友元时，不在需要使用class关键字，并且还可以使用类的别名
+   (使用typedef或者using定义)
+  2.为类模板声明友元
+  */
+	Tom tom;
+	tom.print();
+
+	Rectangle<Verify> rect(100, 100);
+	Circle<Verify> circle(90);
+	Verify verify(100, 200, rect);
+	Verify verify1(50, circle);
+
+	/*
+	特性:26 强类型枚举
+	    1)强作用域:强类型枚举成员的名称不会被输出到其父作用域的空间
+		2)转换限制:强类型枚举成员的值不可以与整型隐式的转换。
+		3)可以指定底层类型:强类型枚举默认的底层类型为int，但可以显示地指定底层类型，具体方法
+		为在枚举名称后面加上:type，其中type可以是除了wchar_t以外的任何类型。
+	对原有枚举的扩展：
+	   1)原有的枚举类型的底层类型在默认情况下，仍然由编译器指定实现，但也可以跟强类型枚举一样
+	   显示地由程序员来指定，其指定方式跟强类型枚举一样,都是枚举类型名后面加上:type,其中type
+	   可以是除了wchar_t以外的任何类型
+	   2)关于作用域，在C++11中，枚举成员的名字除了会自动输出到父作用域，也可以在枚举类型定义
+	   的作用域内有效。
+	*/
+	cout << "red: " << (char)Red << endl;
+	cout << "red: " << (char)TestColor::Red << endl;
+	cout << "color size: " << sizeof(TestColor) << endl;
+	cout << "red: "<<static_cast<int>(Color::Red)<<endl;
+	int enumColor = (int)(Color::Red);
+	cout << "color size: " << sizeof(Color) << endl;
+	cout << "color1 size: " << sizeof(Color1) << endl;
+	EnumTest::print();
+
+	/*
+	特性:27 非受限联合体
+	1.什么是非受限联合体
+	  在c++11之前我们使用的联合体是由局限的，主要有以下三点：
+	    1)不允许联合体拥有非pod类型成员
+		2)不允许联合体拥有静态成员
+		3)不允许联合体拥有引用类型成员
+	在新的c++11标准中取消了关于联合体对于数据成员类型的限定，规定任务非引用类型都可以成为
+	联合体的数据成员。
+	2.placement new
+	  一般情况下，使用new申请空间时,是从系统的堆中分配空间,申请所得的空间的位置是根据当时
+	  内存的实际使用情况决定的，但是，在某些特殊情况下，可能需要在已分配的特定内存创建对象
+	  这种操作就叫做placement new即定位放置new
+	  定位放置new 操作的语法形式不同于普通new操作：
+	    使用new申请内存空间:Base*ptr = new Base;
+		使用定位放置new申请内存空间语法：
+		  ClassName* ptr = new(定位内存地址)ClassName;
+	  注意事项:
+	     1)使用定位放置new操作，既可以在栈上生成对象，也可以在堆上生成对象，这取决于定位时
+		 指定的内存地址在堆上还是栈上。
+		 2)从表面上，定位放置new操作是申请空间，其本质是利用已经申请好的空间，真正的申请
+		 空间的工作是在此之前完成的。
+		 3)使用定位放置new创建对象时会自动调用对应类的构造函数，但由于对象的空间不会自动释放
+		 如果需要释放堆内存需要显示的调用类的析构函数
+		 4)使用定位放置new操作骂我们反复动态申请到同一块堆内存，这样可以避免内存的重复创建和
+		 销毁，从而提高程序的执行效率(比如网络通信中数据的接收和发送)
+	3.匿名非受限联合体
+	*/
+	UnionTest unionTest;
+	unionTest.num1 = 100;
+	cout << "static num value:" << unionTest.num << endl;
+	cout << "num1 value:" << unionTest.num1 << endl;
+
+	UnionTest unionTest1;
+	unionTest1.num = 50;
+	unionTest1.print();
+	UnionTest::print();
+	cout << "static num value:" << unionTest1.num << endl;
+	cout << "static num value:" << unionTest.num << endl;
+
+	Student s;
+	s.name = "I am student";
+	s.t.setText("I am haizeiwang");
+	cout << "s.name= " << s.name << endl;
+	PersonInfo student(9727);
+	PersonInfo local("622820198312341054");
+	PersonInfo foreign("japan", "13198603451");
+	student.print();
+	local.print();
+	foreign.print();
+
+	/*
+	特性:28 处理日期和时间的chrono库
+	chrono库主要包含三种类型的类:时间间隔duration 时钟类clocks 时间点 time point
+	1.时间间隔duration
+	  duration表示一段时间间隔
+	  注意事项:duration的加减法运算有一定的规则，当两个duration始终周期不相同的时候
+	  会先统一成一种时钟，然后再进行算术运算，统一的规则如下：
+	   假设有ratio<x1,y1>和ratio<x2,y2>两个时钟周期，首先需要求出x1,x2的最大公约数X，
+	   然后求出y1和y2的最小公倍数Y，统一之后的时间周期ratio<X,Y>
+    2.时间点time_point
+	3.时钟clocks
+	  1)system_clock:系统时钟,系统时钟可以修改，甚至可以网络对时，因此使用系统时间计算
+	  时间整可能不准;
+	  2)steady_clock:是固定时钟,相当于秒表，开始计时后，时间只会增长并且不能修改,适用于
+	  计算程序耗时;
+	  3)high_resolution_clock:和steady_clock是等价的(是它的别名);
+	4.转换函数
+	  1)duration_cast
+	    隐士转换规则:
+		 1.如果对时钟周期进行转换,原时钟周期必须能整除目的时钟周期(比如小时到分钟)
+		 2.如果是对的时钟周期次数的类型进行转换:低等类型默认可以向高等类型转换(int向double)
+		 3.如果时钟周期和时钟周期次数类型都变了，根据第二点进行推导（也就是看时间周期次数类型）
+		 4.以上条件都不满足，那么就需要使用duration_cast进行显示转换了。
+	  2)time_point_cast
+	    作用:对时间点进行转换，因为不同的时间点对象内部的时钟周期period，和周期次数的类型Rep可
+		能也是不同的，一般情况下可以进行隐士类型转换。
+		duration_cast 用于转换 std::chrono::duration（时间间隔）。
+		time_point_cast 内部使用 duration_cast 转换时间点的 time_since_epoch()。
+	*/
+	printChrono();
+	systemClockTest();
+	steadyClock();
+	durationCastTest();
+	timePointTest();
+
+	/*
+	特性:30 命名空间-this_thread
+	1.get_id():得到当前线程的线程id
+	2.sleep_for():阻塞线程一段时间
+	3.sleep_util():阻塞线程到某个时间点
+	4.yield():主动放弃cpu资源,但是这个变为就绪态的线程马上会参与到下一轮cpu的抢夺战
+	中，不排除它能够继续cpu时间片的情况，这个是概率问题。
+	线程被创建后有5种状态:创建态、就绪态、运行态、阻塞态(挂起态)、退出态(终止态)
+	*/
+
+	/*
+	特性:31 C++线程的使用
+	c++11中提供的线程类为std::thread
+	2.公共成员函数
+	 1)get_id() 获取线程id
+	 2)join()   阻塞调用线程
+	 3)detach() 线程分离函数,主线程不需要负责子线程的资源释放
+	   注意事项:线程函数detach()不会阻塞线程，子线程和主线程分离之后,在主线程中就不能
+	   再对这个子线程做任何控制了，比如:通过join()阻塞主线程等待子线程中的任务执行完毕
+	   或者调用get_id()获取子线程的线程id
+	4)joinable() 用于判断主线程和子线程是否有关联（子线程必须有任务函数）
+	  返回true:主线程和子线程之间有关联关系
+	  返回false:主线程和子线程之间无关联关系
+    3.静态函数
+	  hardware_concurrency() 返回电脑cpu核心数
+	4.C线程库
+	*/
+	threadTest();
+
+	/*
+	特性:32 线程函数 std::call_once()
+	保证函数在多线程环境下只能被调用一次，使用call_once()时候需要一个once_flag
+	作为传入参数
+	*/
+	thread sigle1(MySigleTest, "lufei");
+	thread sigle2(MySigleTest, "aisi");
+	thread sigle3(MySigleTest, "sabo");
+	thread sigle4(MySigleTest, "yiming");
+	sigle1.join();
+	sigle2.join();
+	sigle3.join();
+	sigle4.join();
+
+	/*
+	特性:33 C++线程同步之互斥锁
+	互斥锁使用注意事项：
+	  1)内存可能涉及多个线程的同时访问，此时需要通过互斥锁对其进行保护。
+	  2)使用互斥锁锁住的是和共享数据相关的一个代码块
+	  3)在程序中一个共享数据对应多个代码块，在锁这些代码块的时候要用同一把锁，
+	  并且程序运行期间不能销毁这把互斥锁。
+	在C++11中提供了四种互斥锁:（使用互斥锁时需要知道，互斥锁需要保护的临界资源是什么）
+	1.std:mutex:独占互斥锁，不能递归使用
+	  1.1成员函数
+	     lock():用于函数临界区加锁，并且只有一个线程获得锁的所有权
+		 try_lock():用于函数临界区尝试加锁
+		 unlock():用于函数临界区解锁，释放锁的所有权
+		 lock()和try_lock()的区别在于，try_lock()不会阻塞线程，lock()会阻塞线程
+		  1)如果互斥锁是未锁定状态，得到了互斥锁所有权加锁成功，返回true
+		  2)如果互斥锁是锁定状态，无法得到互斥锁所有权加锁失败，返回false
+	std::timed_mutex:带超时的独占互斥锁，不能递归使用
+	     额外成员函数
+		   1)try_lock_for 函数是当线程获取不到互斥锁资源的时候，让线程阻塞的一定的时间长度
+		   2)try_lock_until函数是当线程获取不到互斥锁资源的时候，让线程阻塞到某一个指定的时间点
+	std::recursive_mutex:递归互斥锁，不带超时功能
+	     允许一个线程多次获得互斥锁所有权，递归互斥锁可以解决死锁问题
+	std::recursive_timed_mutex:带超时的递归互斥锁
+	2.std::lock_guard
+	  lock_guard是c++11新增的一个类模版，使用这个类，可以简化互斥锁lock()和unlock()
+	  写法，同时更安全。
+	*/
+	mutexTest();
+	/*
+	特性:34 C++线程同步之条件变量,c++11中提供以下两种条件变量
+	condition_variable:需要配合std::unique_lock<std::mutex>进行wait操作，也就是阻塞
+	线程的操作
+	condition_variable_any:可以任意带有lock()、unlock()语义的mutex搭配使用，也就是说
+	有四种：
+	     std::mutex:独占非递归互斥锁
+		 std::timed_mutex:带超时独占非递归互斥锁
+		 std::recursive_mutex:递归互斥锁
+		 std::recursive_timed_mutex:带超时的递归互斥锁
+	*/
+	testProducerConsumer();
+
+	/*
+	特性:35 原子变量
+	原子指的是一些列不可被cpu上下文交换的机器指令，这些指令组合在一起就形成了原子
+	操作，在多核cpu下，当某个cpu核心开始运行原子操作时，会先暂停其他cpu内核对内存
+	的操作，以保证原子操作不会被其他cpu内核所干扰
+	C++11中提供了原子类型std::atomic<T>,支持修改、读取等操作，还具备较高的并发性。
+	原子变量不支持浮点类型和复合类型作为模板参数。
+	内存顺序约束:
+	    memory_order_relaxed:这是最宽松的规则，它的编译器和cpu不做任何限制，可以乱序
+		memory_order_release:释放，设定内存屏障，保证它之前的操作永远在它之前，但是
+		它后面的操作可能被重排到它前面
+		memory_order_acquire:获取，设定内存屏障，保证它之后的访问永远在它之后，但是它
+		之前的操作却有可能被重排到它后面，往往和Release在不同线程中联合使用
+		memory_order_consume:改进版本的memory_order_acquire，开销更小
+		memory_order_acq_rel:它和Acquire和Release结合,同时拥有它们两提供的保证。比如你要
+		对atomic自增1，同时希望该操作之前和之后的读取和写入操作不会被重排。
+		memory_order_seq_cst:顺序一致性，memory_order_seq_cst就像是memory_order_acq_rel的
+		加强版，它不管原子操作时读取还是写入的操作，只要某个线程有用到memory_order_seq_cst
+		的原子操作，线程中读memory_order_seq_cst操作前的数据操作绝对不会被重新排在memory_order_seq_cst
+		操作之后，且读memory_order_seq_cst操作后的数据操作绝对不会被重新排在memory_order_seq_cst操作前。
+	*/
+
+	testAtomic();
+	testCounter();
 
 	getchar();
 }
