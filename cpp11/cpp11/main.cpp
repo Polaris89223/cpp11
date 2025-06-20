@@ -26,6 +26,9 @@
 #include "mutex.hpp"
 #include "condition.hpp"
 #include "atomic.hpp"
+#include "future.hpp"
+#include "packagetask.hpp"
+#include "async.hpp"
 
 using namespace std;
 struct Base {
@@ -1099,6 +1102,50 @@ int main()
 
 	testAtomic();
 	testCounter();
+
+	/*
+	特性:36 线程异步
+	1.std::future :获取另一个线程的返回数据
+	2.std::promise:是一个协助线程赋值的类，它能够将数据和future对象绑定起来，为了获取
+	线程函数中的某个值提供便利。
+	  在外部线程中创建的promise对象必须要通过引用的方式传递到子线程，函数中，在实例化
+	  子线程对象的时候，如果任务函数的参数是引用类型，那么实参一定要放到std::ref()函数
+	  中，表示要传递这个实参的引用到任务函数中。
+	3.std::packaged_task:类包装了一个可调用对象包装器对象(可调用对象包装器包装的是可调用
+	对象,可调用对象都可以作为函数来使用)，可以对子线程的任务函数进行打包。这个类可以将内部
+	包装的函数和future类绑定到一起，以便进行后续的异步调用，它和std::promise有点类似,std::promise
+	内部保存一个共享状态的值，而std::packaged_task保存的是一个函数。
+	4.std::async:通过这个函数可以直接启动一个子线程并在这个子线程中执行对应的任务函数，
+	异步任务执行完成返回的结果也是存储到一个future对象中，当需要获取异步任务执行结果时，只需要
+	调用future类中的get()方案即可，如果不关注异步任务的结果，只是简单地等待任务完成的话，
+	可以调用future类中的wait()和wait_for()方法。
+	  policy:可调用对象执行策略
+	  std::launch::async:调用async函数的时候创建新的线程执行任务函数
+	  std::launch::deferred:调用async函数时不执行任务函数，直到调用了future的get()或者wait()
+	  方法时才去执行任务，这种方式不会创建新的线程。(任务函数在当前线程执行)
+	归纳总结：
+	  1)使用async()函数，是多线程中最简单的一种方式，不需要自己创建线程对象，并且可以得到
+	  子线程函数返回值。
+	  2)使用std::promise类，在子线程中可以传出返回值也可以传出其他数据，并且可选择在什么
+	  时候将数据从子线程中传递出来，使用起来更加灵活
+	  3)使用std::packaged_task类，可以将子线程的任务函数进行打包，并且得到子线程的返回值。
+	*/
+	
+	promise<string> pro;
+	//thread promiseThread(promiseFunc, ref(pro));
+	thread promiseThread([](promise<string>&p){
+		this_thread::sleep_for(chrono::seconds(3));
+		p.set_value("I am lucy,be haizewang11....");
+		this_thread::sleep_for(chrono::seconds(1));
+	},ref(pro));
+	future<string> future = pro.get_future();
+	string futureStr = future.get();
+	cout << "son thread data:" << futureStr << endl;
+	promiseThread.join();
+
+	testpackaged_task();
+
+	testAsync();
 
 	getchar();
 }

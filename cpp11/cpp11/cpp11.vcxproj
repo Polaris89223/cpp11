@@ -156,6 +156,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="async.hpp" />
     <ClInclude Include="atomic.hpp" />
     <ClInclude Include="auto.hpp" />
     <ClInclude Include="c11Ptr.hpp" />
@@ -168,10 +169,12 @@
     <ClInclude Include="forward.hpp" />
     <ClInclude Include="friend.hpp" />
     <ClInclude Include="functional.hpp" />
+    <ClInclude Include="future.hpp" />
     <ClInclude Include="initialList.hpp" />
     <ClInclude Include="lamda.hpp" />
     <ClInclude Include="mutex.hpp" />
     <ClInclude Include="nullptr.hpp" />
+    <ClInclude Include="packagetask.hpp" />
     <ClInclude Include="rvReference.hpp" />
     <ClInclude Include="sharedPtr.hpp" />
     <ClInclude Include="template.hpp" />
